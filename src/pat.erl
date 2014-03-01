@@ -49,9 +49,6 @@
 %% API
 
 start() ->
-    lager:start(),
-    lager:set_loglevel(lager_console_backend, debug),
-
     application:start(crypto),
     application:start(public_key),
     application:start(ssl),
