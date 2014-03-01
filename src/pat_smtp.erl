@@ -1,5 +1,4 @@
 -module(pat_smtp).
--compile([{parse_transform, lager_transform}]).
 -include_lib("kernel/include/inet.hrl").
 
 %% Public API.
@@ -312,7 +311,6 @@ communicate(Connection, Command, Status, Timeout) ->
 
 -spec send(connection(), binary()) -> ok | {error, inet:posix()}.
 send({M, Socket}, Data) ->
-    lager:debug("~s", [Data]),
     M:send(Socket, Data).
 
 -spec recv(connection(), timeout())
@@ -322,8 +320,7 @@ recv(Connection, Timeout) ->
 
 recv({M, Socket}=Connection, Timeout, Acc) ->
     case M:recv(Socket, 0, Timeout) of
-        {ok, Data= <<Status:3/binary, Sep:1/binary, Rest/binary>>} ->
-            lager:debug("~s", [Data]),
+        {ok, _Data = <<Status:3/binary, Sep:1/binary, Rest/binary>>} ->
             NewAcc = [{list_to_integer(binary_to_list(Status)),
                        binary:replace(Rest, [<<"\r">>, <<"\n">>],
                                       <<"">>, [global])}
