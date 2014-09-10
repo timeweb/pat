@@ -136,12 +136,12 @@ do_auth(Connection, Extensions, Opts) ->
     Password  = proplists:get_value(password, Opts),
     HasUserPassword = User =/= undefined andalso Password =/= undefined,
     case proplists:get_value(auth, Opts, maybe) of
-        always -> {ok, true};                 %% server without AUTH
-        never -> {ok, undefined};
+        always -> {ok, true};
+        never -> {ok, true};
         maybe when not HasUserPassword ->
             case AuthTypes of
-                [] -> {ok, undefined};        %% ok, forget it :)
-                _  -> {error, missing_auth}   %% server requires AUTH!
+                [] -> {ok, true};
+                _  -> {error, missing_auth}
             end;
         _ when HasUserPassword ->
             auth(Connection, {any, User, Password, AuthTypes}, Timeout)
