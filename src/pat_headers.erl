@@ -1,9 +1,14 @@
 -module(pat_headers).
 
+-export([encode/1]).
 -export([encode/2]).
 
 -define(MAXLINELEN, 76).
 -define(MISCLEN, 7).
+-define(CHARSET, <<"utf-8">>).
+
+encode(Header) ->
+    encode(Header, ?CHARSET).
 
 encode(<<>>, _Charset) ->
     <<"">>;
@@ -26,7 +31,7 @@ encode({Header, Value}, Charset) when Header =:= <<"To">>; Header =:= <<"From">>
     {ok, Addresses} = pat_util:parse_rfc822_addresses(Value),
     {Names, Emails} = lists:unzip(Addresses),
     Result = pat_util:combine_rfc822_addresses(lists:zip(names(Names, Charset), Emails)),
-    {Header, Result};
+    [{Header, Result}];
 
 encode(Header, Charset) ->
     MaxEncoded = ?MAXLINELEN - length(Charset) - ?MISCLEN,
