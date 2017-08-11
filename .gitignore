@@ -1,4 +1,9 @@
 deps
 ebin
-log/*
 *.dump
+.eunit
+*.beam
+.dialyzer_plt
+*_pb.hrl
+.idea
+*.iml

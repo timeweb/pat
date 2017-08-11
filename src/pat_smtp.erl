@@ -1,5 +1,4 @@
 -module(pat_smtp).
--compile([{parse_transform, lager_transform}]).
 -include_lib("kernel/include/inet.hrl").
 
 %% Public API.
@@ -137,12 +136,12 @@ do_auth(Connection, Extensions, Opts) ->
     Password  = proplists:get_value(password, Opts),
     HasUserPassword = User =/= undefined andalso Password =/= undefined,
     case proplists:get_value(auth, Opts, maybe) of
-        always -> {ok, true};                 %% server without AUTH
-        never -> {ok, undefined};
+        always -> {ok, true};
+        never -> {ok, true};
         maybe when not HasUserPassword ->
             case AuthTypes of
-                [] -> {ok, undefined};        %% ok, forget it :)
-                _  -> {error, missing_auth}   %% server requires AUTH!
+                [] -> {ok, true};
+                _  -> {error, missing_auth}
             end;
         _ when HasUserPassword ->
             auth(Connection, {any, User, Password, AuthTypes}, Timeout)
@@ -321,7 +320,6 @@ communicate(Connection, Command, Status, Timeout) ->
 
 -spec send(connection(), binary()) -> ok | {error, inet:posix()}.
 send({M, Socket}, Data) ->
-    lager:debug("~s", [Data]),
     M:send(Socket, Data).
 
 -spec recv(connection(), timeout())
@@ -331,8 +329,7 @@ recv(Connection, Timeout) ->
 
 recv({M, Socket}=Connection, Timeout, Acc) ->
     case M:recv(Socket, 0, Timeout) of
-        {ok, Data= <<Status:3/binary, Sep:1/binary, Rest/binary>>} ->
-            lager:debug("~s", [Data]),
+        {ok, _Data = <<Status:3/binary, Sep:1/binary, Rest/binary>>} ->
             NewAcc = [{list_to_integer(binary_to_list(Status)),
                        binary:replace(Rest, [<<"\r">>, <<"\n">>],
                                       <<"">>, [global])}

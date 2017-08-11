@@ -75,15 +75,12 @@ join([H|T], Sep) -> <<H/binary, Sep/binary, (join(T, Sep))/binary>>.
 wrap(Email) ->
     {ok, Date} = tempo:format(rfc2822, {now, now()}),
     Hdrs = [{<<"Date">>, Date},
-            {<<"From">>, Email#email.sender},
             {<<"To">>, join(Email#email.recipients, <<", ">>)},
-            {<<"Subject">>, Email#email.subject}|Email#email.headers],
+            {<<"Subject">>, Email#email.subject} | Email#email.headers],
     Meta = [<<Key/binary, ": ", Val/binary>> || {Key, Val} <- Hdrs],
     {Email#email.sender,
      Email#email.recipients,
-     <<(join(Meta, <<"\r\n">>))/binary, "\r\n",
-       "\r\n",
-       (Email#email.message)/binary>>}.
+     <<(join(Meta, <<"\r\n">>))/binary, "\r\n", "\r\n", (Email#email.message)/binary>>}.
 
 %% @doc Returns a sorted list of MX servers for `Domain', lowest distance first.
 -spec mxlookup(inet:hostname()) -> [{integer(), inet_res:dns_name()}].
@@ -156,5 +153,5 @@ send_one(Host, Port, Envelope, Opts) ->
             Result = pat_smtp:send(Connection, Envelope, Opts),
             pat_smtp:close(Connection),
             Result;
-        {error, _Reason}=Error -> Error
+        {error, _Reason} = Error -> Error
     end.
