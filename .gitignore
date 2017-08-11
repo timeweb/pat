@@ -1,5 +1,6 @@
 deps
 ebin
+log/*
 *.dump
 .eunit
 *.beam
@@ -7,3 +8,4 @@ ebin
 *_pb.hrl
 .idea
 *.iml
+src/rfc822_parse.erl

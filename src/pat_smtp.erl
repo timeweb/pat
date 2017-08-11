@@ -100,12 +100,17 @@ do_check(Connection, Opts) ->
                undefined -> fqdn()
            end,
     Timeout = proplists:get_value(timeout, Opts, infinity),
-    {ok, Extensions} = do_ehlo(Connection, FQDN, Timeout),
-    {NewConnection, NewExtensions} =
-        do_starttls(Connection, Extensions, [{hostname, FQDN}|Opts]),
-    case do_auth(NewConnection, NewExtensions, Opts) of
-        {ok, true} -> {ok, NewConnection};
-        {ok, false} -> {error, authentication_failed};
+    case do_ehlo(Connection, FQDN, Timeout) of
+        {ok, Extensions} ->
+            case do_starttls(Connection, Extensions, [{hostname, FQDN}|Opts]) of
+                {ok, {NewConnection, NewExtensions}} ->
+                    case do_auth(NewConnection, NewExtensions, Opts) of
+                        {ok, true}  -> {ok, NewConnection};
+                        {ok, false} -> {error, authentication_failed};
+                        {error, _Reason}=Error -> Error
+                    end;
+                {error, _Reason}=Error -> Error
+            end;
         {error, _Reason}=Error -> Error
     end.
 
@@ -122,20 +127,27 @@ do_starttls(Connection, Extensions, Opts) ->
         never -> {Connection, Extensions};
         maybe when not Supported -> {Connection, Extensions};
         _ when Supported ->
-            {ok, NewConnection} = starttls(Connection, Timeout),
-            {ok, NewExtensions} = do_ehlo(NewConnection,
-                                          proplists:get_value(hostname, Opts),
-                                          Timeout),
-            {NewConnection, NewExtensions}
+            case starttls(Connection, Timeout) of
+                {ok, NewConnection} ->
+                    case do_ehlo(NewConnection,
+                                 proplists:get_value(hostname, Opts),
+                                 Timeout) of
+                        {ok, NewExtensions} ->
+                            {ok, {NewConnection, NewExtensions}};
+                        {error, _Reason}=Error -> Error
+                    end;
+                {error, _Reason}=Error -> Error
+            end
     end.
 
 do_auth(Connection, Extensions, Opts) ->
+    Auth      = proplists:get_value(auth, Opts, maybe),
     AuthTypes = proplists:get_value(<<"AUTH">>, Extensions, []),
     Timeout   = proplists:get_value(timeout, Opts, infinity),
     User      = proplists:get_value(user, Opts),
     Password  = proplists:get_value(password, Opts),
     HasUserPassword = User =/= undefined andalso Password =/= undefined,
-    case proplists:get_value(auth, Opts, maybe) of
+    case Auth of
         always -> {ok, true};
         never -> {ok, true};
         maybe when not HasUserPassword ->
@@ -143,8 +155,7 @@ do_auth(Connection, Extensions, Opts) ->
                 [] -> {ok, true};
                 _  -> {error, missing_auth}
             end;
-        _ when HasUserPassword ->
-            auth(Connection, {any, User, Password, AuthTypes}, Timeout)
+        _ -> auth(Connection, {any, User, Password, AuthTypes}, Timeout)
     end.
 
 do_send(Connection, {Sender, Recipients, Message}, Opts) ->
@@ -353,6 +364,7 @@ code(421) -> service_not_available;
 code(450) -> mailbox_unavailable;
 code(451) -> local_error;
 code(452) -> insufficient_system_storage;
+code(454) -> tls_not_available;
 code(500) -> unknown_command;
 code(501) -> invalid_arguments;
 code(502) -> not_implemnted;
